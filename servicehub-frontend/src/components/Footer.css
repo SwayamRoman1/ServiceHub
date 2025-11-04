@@ -1,0 +1,120 @@
+/* Footer */
+.footer {
+  width: 100%;
+  background-color: var(--header-footer-bg, var(--primary-color));
+  color: var(--text-color, var(--button-text));
+  transition: background-color 0.3s ease, color 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: "Montserrat", sans-serif;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer-logo {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--secondary-color);
+  text-decoration: none;
+  font-family: "Raleway", sans-serif;
+}
+
+.footer-tagline {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #b0b0b0);
+  font-family: "Nunito", sans-serif;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+
+.footer-links a {
+  color: var(--text-color, var(--button-text));
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+  color: var(--primary-color);
+}
+
+.footer-bottom {
+  text-align: center;
+  padding: 1rem 0;
+  font-size: 0.85rem;
+  background-color: var(--footer-bottom-bg, var(--primary-color));
+  color: var(--text-secondary, #b0b0b0);
+  font-family: "Nunito", sans-serif;
+}
+
+/* Sticky Footer Fix */
+body,
+html,
+#root {
+  height: 100%;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .footer-container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .footer-links {
+    justify-content: center;
+  }
+}
+
+/* Dark Mode Overrides */
+.dark .footer {
+  background-color: var(--card-bg-dark, #2a2738);
+  color: var(--text-dark, #fcfcfc);
+}
+
+.dark .footer-links a {
+  color: var(--text-dark, #fcfcfc);
+}
+
+.dark .footer-links a:hover {
+  color: var(--secondary-color);
+}
+
+.dark .footer-bottom {
+  background-color: var(--card-bg-dark, #2a2738);
+  color: var(--text-secondary, #b0b0b0);
+}
+
+.dark .footer-logo {
+  color: var(--secondary-color);
+}
