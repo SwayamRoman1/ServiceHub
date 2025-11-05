@@ -1,16 +1,27 @@
-const Chat = require("../models/Chatmodel");
+const Chat = require("../models/ChatModel");
 
-const sendMessage = async (req, res) => {
-  const { chatId, text } = req.body;
-  const message = await Chat.create({ chatId, sender: req.user._id, text });
-  res.status(201).json(message);
+exports.sendMessage = async (req, res) => {
+  try {
+    const { chatId, text } = req.body;
+    if (!chatId || !text)
+      return res.status(400).json({ message: "chatId and text required" });
+    const message = await Chat.create({ chatId, sender: req.user._id, text });
+    res.status(201).json(message);
+  } catch (e) {
+    console.error("sendMessage error:", e);
+    res.status(500).json({ message: "Failed to send message" });
+  }
 };
 
-const getMessages = async (req, res) => {
-  const messages = await Chat.find({ chatId: req.params.chatId }).populate(
-    "sender"
-  );
-  res.json(messages);
+exports.getMessages = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const messages = await Chat.find({ chatId })
+      .sort({ createdAt: 1 })
+      .populate("sender");
+    res.json(messages);
+  } catch (e) {
+    console.error("getMessages error:", e);
+    res.status(500).json({ message: "Failed to fetch messages" });
+  }
 };
-
-module.exports = { sendMessage, getMessages };

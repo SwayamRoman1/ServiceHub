@@ -1,27 +1,75 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-// Create context
-export const ThemeContext = createContext(); // ✅ export ThemeContext explicitly
+export const ThemeContext = createContext();
 
-// Provider component
+const applyTheme = (mode) => {
+  const root = document.documentElement;
+  const body = document.body;
+
+  root.setAttribute("data-theme", mode);
+  body.setAttribute("data-theme", mode);
+
+  // Mobile browser address-bar color
+  const meta =
+    document.querySelector('meta[name="theme-color"]') ||
+    (() => {
+      const m = document.createElement("meta");
+      m.setAttribute("name", "theme-color");
+      document.head.appendChild(m);
+      return m;
+    })();
+  meta.setAttribute("content", mode === "dark" ? "#0b0f14" : "#ffffff");
+};
+
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
+  const prefersDark =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+
+  const [stored, setStored] = useState(() => localStorage.getItem("theme")); // "light" | "dark" | null
+  const effective = useMemo(
+    () => stored || (prefersDark ? "dark" : "light"),
+    [stored, prefersDark]
+  );
 
   useEffect(() => {
-    localStorage.setItem("theme", theme);
-    document.documentElement.setAttribute("data-theme", theme); // apply globally
-  }, [theme]);
+    applyTheme(effective);
+  }, [effective]);
+
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (e) => {
+      if (!stored) applyTheme(e.matches ? "dark" : "light");
+    };
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, [stored]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    const next = effective === "light" ? "dark" : "light";
+    localStorage.setItem("theme", next);
+    setStored(next);
+  };
+
+  const clearToSystem = () => {
+    localStorage.removeItem("theme");
+    setStored(null);
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{ theme: effective, toggleTheme, clearToSystem }}
+    >
       {children}
     </ThemeContext.Provider>
   );
 };
 
-// Custom hook (optional)
 export const useTheme = () => useContext(ThemeContext);

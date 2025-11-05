@@ -1,14 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const {
-  getProviders,
-  updateProvider,
-  deleteProvider,
-} = require("../controllers/providerController");
 const auth = require("../middleware/auth");
+const isAdmin = require("../middleware/isAdmin");
+const ctrl = require("../controllers/providerController");
 
-router.get("/", getProviders);
-router.put("/:id", auth, updateProvider);
-router.delete("/:id", auth, deleteProvider);
+router.get("/", ctrl.getAll);
+router.put("/:id", auth, isAdmin, ctrl.update);
+router.delete("/:id", auth, isAdmin, ctrl.remove);
 
 module.exports = router;

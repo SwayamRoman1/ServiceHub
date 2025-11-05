@@ -8,20 +8,19 @@
   --text-dark: #f4f4f9;
 }
 
-/* Dark/light theme classes */
-.light {
+/* Base */
+.app-container {
   background-color: var(--background-light);
   color: var(--text-light);
   font-family: "Lato", sans-serif;
 }
 
-.dark {
+html[data-theme="dark"] .app-container {
   background-color: var(--background-dark);
   color: var(--text-dark);
-  font-family: "Lato", sans-serif;
 }
 
-/* Navbar */
+/* Navbar demo styles (keep real Navbar.css for structure) */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -61,7 +60,7 @@
   margin: 2rem 0;
 }
 
-/* Service Card */
+/* Service Card (generic) */
 .service-card {
   background: #fff;
   border-radius: 15px;
@@ -149,7 +148,6 @@
   animation: fadeIn 0.8s forwards;
   animation-delay: 0.3s;
 }
-
 @keyframes fadeIn {
   to {
     opacity: 1;
@@ -166,7 +164,7 @@
   font-family: "Poppins", sans-serif;
 }
 
-/* Forms */
+/* Forms (generic wrapper; you also have Auth.css) */
 .auth-form {
   max-width: 400px;
   margin: 5rem auto;

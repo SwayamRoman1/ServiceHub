@@ -1,245 +1,304 @@
 import React, { useEffect, useState } from "react";
 import API from "../api/axios";
-import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
-import "./Dashboard.css";
+import { Button, Field, Input, Textarea, Modal } from "../components/UI";
 
-// ──────────────────────────────
-// Service Modal
-// ──────────────────────────────
-const ServiceModal = ({ show, onClose, onSubmit, service }) => {
-  const { theme } = useTheme();
-  const [name, setName] = useState(service?.name || "");
-  const [description, setDescription] = useState(service?.description || "");
-  const [price, setPrice] = useState(service?.price || "");
-  const [category, setCategory] = useState(service?.category || "");
+const Dashboard = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState({});
+  const [myServices, setMyServices] = useState([]);
+  const [myBookings, setMyBookings] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (service) {
-      setName(service.name);
-      setDescription(service.description);
-      setPrice(service.price);
-      setCategory(service.category || "");
-    } else {
-      setName("");
-      setDescription("");
-      setPrice("");
-      setCategory("");
+  const load = async () => {
+    setLoading(true);
+    try {
+      const d = await API.get("/dashboard");
+      setStats(d.data || {});
+      if (user?.role === "provider") {
+        const mine = await API.get("/services/mine");
+        setMyServices(mine.data || []);
+        const b = await API.get("/bookings/provider");
+        setMyBookings(b.data || []);
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [service]);
+  };
+  useEffect(() => {
+    if (user) load(); /* eslint-disable */
+  }, [user]);
 
-  if (!show) return null;
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit({
-      _id: service?._id,
-      name,
-      description,
-      price: Number(price),
-      category,
-    });
+  const saveService = async (payload) => {
+    setSaving(true);
+    try {
+      if (payload._id) await API.put(`/services/${payload._id}`, payload);
+      else await API.post("/services", payload);
+      setOpen(false);
+      setEditing(null);
+      await load();
+    } catch (e) {
+      alert(e?.response?.data?.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   };
 
+  const removeService = async (id) => {
+    if (!window.confirm("Delete this service?")) return;
+    try {
+      await API.delete(`/services/${id}`);
+      await load();
+    } catch {
+      alert("Delete failed");
+    }
+  };
+
+  const setStatus = async (id, status) => {
+    try {
+      await API.put(`/bookings/${id}/status`, { status });
+      await load();
+    } catch {
+      alert("Update failed");
+    }
+  };
+
+  if (loading) return <section className="section">Loading…</section>;
+
   return (
-    <div className="modal-overlay">
-      <div className={`modal ${theme}`}>
-        <h2>{service ? "Edit Service" : "Add Service"}</h2>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Service Name"
+    <section className="section">
+      <h1 className="mb-0">Dashboard</h1>
+
+      <div className="grid grid-4 mt-3">
+        <div className="card">
+          <div className="muted">Users</div>
+          <div style={{ fontWeight: 800, fontSize: 22 }}>
+            {stats.totalUsers ?? "-"}
+          </div>
+        </div>
+        <div className="card">
+          <div className="muted">Providers</div>
+          <div style={{ fontWeight: 800, fontSize: 22 }}>
+            {stats.totalProviders ?? "-"}
+          </div>
+        </div>
+        <div className="card">
+          <div className="muted">Services</div>
+          <div style={{ fontWeight: 800, fontSize: 22 }}>
+            {stats.totalServices ?? "-"}
+          </div>
+        </div>
+        <div className="card">
+          <div className="muted">Bookings</div>
+          <div style={{ fontWeight: 800, fontSize: 22 }}>
+            {stats.totalBookings ?? "-"}
+          </div>
+        </div>
+      </div>
+
+      {user?.role === "provider" && (
+        <>
+          <div className="flex items-center gap-3 mt-6">
+            <h2 className="mb-0">Your services</h2>
+            <Button
+              variant="primary"
+              style={{ marginLeft: "auto" }}
+              onClick={() => {
+                setEditing(null);
+                setOpen(true);
+              }}
+            >
+              + Add service
+            </Button>
+          </div>
+
+          {myServices.length === 0 ? (
+            <div className="muted mt-3">No services yet. Add one!</div>
+          ) : (
+            <div className="grid grid-4 mt-3">
+              {myServices.map((s) => (
+                <div className="card" key={s._id}>
+                  <h3 style={{ margin: 0 }}>{s.name}</h3>
+                  <div className="muted">
+                    {s.category || "General"} • ₹{s.price ?? 0}
+                  </div>
+                  <div className="mt-2">
+                    {s.description || "No description."}
+                  </div>
+                  <div className="flex gap-3 mt-3">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setEditing(s);
+                        setOpen(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={() => removeService(s._id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <h2 className="mt-6">Bookings for your services</h2>
+          {myBookings.length === 0 ? (
+            <div className="muted">No bookings yet.</div>
+          ) : (
+            <div className="card" style={{ padding: 0 }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Service</th>
+                    <th>Status</th>
+                    <th>Scheduled</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myBookings.map((b) => (
+                    <tr key={b._id}>
+                      <td>{b.user?.name}</td>
+                      <td>{b.service?.name}</td>
+                      <td>
+                        <span className={`badge ${b.status}`}>{b.status}</span>
+                      </td>
+                      <td>
+                        {b.scheduledAt
+                          ? new Date(b.scheduledAt).toLocaleString()
+                          : "-"}
+                      </td>
+                      <td style={{ display: "flex", gap: 8 }}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setStatus(b._id, "accepted")}
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setStatus(b._id, "completed")}
+                        >
+                          Complete
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => setStatus(b._id, "cancelled")}
+                        >
+                          Cancel
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      <ServiceModal
+        open={open}
+        onClose={() => setOpen(false)}
+        onSave={saveService}
+        initial={editing}
+        saving={saving}
+      />
+    </section>
+  );
+};
+
+const ServiceModal = ({ open, onClose, onSave, initial, saving }) => {
+  const [name, setName] = useState(initial?.name || "");
+  const [description, setDescription] = useState(initial?.description || "");
+  const [price, setPrice] = useState(initial?.price ?? "");
+  const [category, setCategory] = useState(initial?.category || "");
+
+  useEffect(() => {
+    if (!open) return;
+    setName(initial?.name || "");
+    setDescription(initial?.description || "");
+    setPrice(initial?.price ?? "");
+    setCategory(initial?.category || "");
+  }, [open, initial]);
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={initial ? "Edit service" : "Add a new service"}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            loading={saving}
+            onClick={() =>
+              onSave({
+                _id: initial?._id,
+                name,
+                description,
+                price: Number(price || 0),
+                category,
+              })
+            }
+          >
+            {initial ? "Update" : "Create"}
+          </Button>
+        </>
+      }
+    >
+      <div className="form">
+        <Field label="Service name">
+          <Input
+            placeholder="e.g., Deep Cleaning"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
-          <textarea
-            placeholder="Description"
+        </Field>
+        <Field label="Description">
+          <Textarea
+            placeholder="What’s included, duration, etc."
+            rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
           />
-          <input
-            type="number"
-            placeholder="Price"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            required
-          />
-          <input
-            type="text"
-            placeholder="Category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-          />
-          <div className="modal-buttons">
-            <button type="submit" className="btn-primary">
-              {service ? "Update" : "Add"}
-            </button>
-            <button type="button" className="btn-secondary" onClick={onClose}>
-              Cancel
-            </button>
-          </div>
-        </form>
+        </Field>
+        <div className="field-row">
+          <Field label="Price (₹)">
+            <Input
+              type="number"
+              placeholder="999"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </Field>
+          <Field label="Category">
+            <Input
+              placeholder="Home, Repair, Beauty…"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            />
+          </Field>
+        </div>
       </div>
-    </div>
-  );
-};
-
-// ──────────────────────────────
-// Service Card
-// ──────────────────────────────
-const ServiceCard = ({ service, onEdit, onDelete, onBook }) => {
-  const { theme } = useTheme();
-  return (
-    <div className={`service-card ${theme}`}>
-      <h3>{service?.name}</h3>
-      <p>{service?.description}</p>
-      <p>Price: ${service?.price}</p>
-      <p>Category: {service?.category}</p>
-
-      {onEdit && onDelete && (
-        <div className="card-actions">
-          <button className="btn-primary" onClick={() => onEdit(service)}>
-            Edit
-          </button>
-          <button className="btn-danger" onClick={() => onDelete(service._id)}>
-            Delete
-          </button>
-        </div>
-      )}
-
-      {onBook && (
-        <button className="btn-primary" onClick={() => onBook(service._id)}>
-          Book Service
-        </button>
-      )}
-    </div>
-  );
-};
-
-// ──────────────────────────────
-// Dashboard Component
-// ──────────────────────────────
-const Dashboard = () => {
-  const { theme } = useTheme();
-  const { user, loading } = useAuth();
-
-  const [data, setData] = useState({});
-  const [services, setServices] = useState([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [currentService, setCurrentService] = useState(null);
-  const [fetching, setFetching] = useState(true);
-
-  // Fetch dashboard data
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchData = async () => {
-      setFetching(true);
-      try {
-        const res = await API.get("/dashboard");
-        setData(res.data || {});
-        if (res.data.myServices) setServices(res.data.myServices);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setFetching(false);
-      }
-    };
-    fetchData();
-  }, [user]);
-
-  // Add or Update Service
-  const handleServiceSubmit = async (serviceData) => {
-    try {
-      if (serviceData._id) {
-        await API.put(`/services/${serviceData._id}`, serviceData);
-      } else {
-        await API.post("/services", serviceData);
-      }
-      setModalOpen(false);
-      setCurrentService(null);
-      const res = await API.get("/dashboard");
-      setServices(res.data.myServices || []);
-    } catch (err) {
-      console.error("Error saving service:", err);
-    }
-  };
-
-  // Delete Service
-  const handleDelete = async (id) => {
-    try {
-      await API.delete(`/services/${id}`);
-      setServices(services.filter((s) => s._id !== id));
-    } catch (err) {
-      console.error("Error deleting service:", err);
-    }
-  };
-
-  if (loading || fetching) return <div>Loading dashboard...</div>;
-
-  return (
-    <div className={`dashboard ${theme}`}>
-      <h1>Welcome, {user?.name || "User"}!</h1>
-
-      {user?.role === "provider" && (
-        <>
-          <button
-            className="btn-primary"
-            onClick={() => {
-              setCurrentService(null);
-              setModalOpen(true);
-            }}
-          >
-            Add New Service
-          </button>
-
-          <div className="services-container">
-            {services.length === 0 ? (
-              <p>No services yet. Add one!</p>
-            ) : (
-              services.map((srv) => (
-                <ServiceCard
-                  key={srv._id}
-                  service={srv}
-                  onEdit={(service) => {
-                    setCurrentService(service);
-                    setModalOpen(true);
-                  }}
-                  onDelete={handleDelete}
-                />
-              ))
-            )}
-          </div>
-        </>
-      )}
-
-      {user?.role === "customer" && (
-        <div className="available-services">
-          <h2>Available Services</h2>
-          {data.availableServices?.length ? (
-            data.availableServices.map((srv) => (
-              <ServiceCard
-                key={srv._id}
-                service={srv}
-                onBook={(id) => alert(`Booked service ${id}`)}
-              />
-            ))
-          ) : (
-            <p>No services available right now.</p>
-          )}
-        </div>
-      )}
-
-      <ServiceModal
-        show={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleServiceSubmit}
-        service={currentService}
-      />
-    </div>
+    </Modal>
   );
 };
 

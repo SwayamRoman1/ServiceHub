@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "provider", "admin"],
       default: "user",
     },
+    image: String,
   },
   { timestamps: true }
 );
@@ -21,8 +22,8 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-userSchema.methods.comparePassword = async function (password) {
-  return await bcrypt.compare(password, this.password);
+userSchema.methods.comparePassword = function (pwd) {
+  return bcrypt.compare(pwd, this.password);
 };
 
 module.exports = mongoose.models.User || mongoose.model("User", userSchema);

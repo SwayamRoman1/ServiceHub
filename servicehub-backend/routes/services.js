@@ -1,14 +1,13 @@
+// routes/services.js
 const express = require("express");
 const router = express.Router();
-const {
-  getServices,
-  updateService,
-  deleteService,
-} = require("../controllers/serviceController");
 const auth = require("../middleware/auth");
+const ctrl = require("../controllers/serviceController");
 
-router.get("/", getServices);
-router.put("/:id", auth, updateService);
-router.delete("/:id", auth, deleteService);
+router.get("/", ctrl.getAll);
+router.get("/mine", auth, ctrl.getMine);
+router.post("/", auth, ctrl.create);
+router.put("/:id", auth, ctrl.update);
+router.delete("/:id", auth, ctrl.remove);
 
 module.exports = router;

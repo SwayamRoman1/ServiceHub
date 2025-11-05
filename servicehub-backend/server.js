@@ -1,3 +1,4 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
@@ -23,6 +24,7 @@ app.use("/api/grievances", require("./routes/grievances"));
 app.use("/api/chat", require("./routes/chat"));
 app.use("/api/bookings", require("./routes/bookings"));
 app.use("/api/dashboard", require("./routes/dashboard"));
+app.use("/api/admin", require("./routes/admin")); // ✅ add this
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

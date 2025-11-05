@@ -1,123 +1,117 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import API from "../api/axios";
-import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
-import "./Home.css";
+import { Button } from "../components/UI";
 
 const Home = () => {
-  const { theme } = useTheme();
   const { user } = useAuth();
-
   const [services, setServices] = useState([]);
   const [providers, setProviders] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    (async () => {
       try {
-        const servicesRes = await API.get("/services");
-        setServices(servicesRes.data || []);
-        const providersRes = await API.get("/providers");
-        setProviders(providersRes.data || []);
-      } catch (err) {
-        console.error(err);
+        const [s, p] = await Promise.all([
+          API.get("/services"),
+          API.get("/providers"),
+        ]);
+        setServices(s.data || []);
+        setProviders(p.data || []);
       } finally {
         setLoading(false);
       }
-    };
-    fetchData();
+    })();
   }, []);
 
-  const filteredServices = services.filter((service) =>
-    service.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredServices = useMemo(
+    () =>
+      services.filter((s) => s.name?.toLowerCase().includes(q.toLowerCase())),
+    [services, q]
   );
-  const filteredProviders = providers.filter((provider) =>
-    provider.user?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProviders = useMemo(
+    () =>
+      providers.filter((p) =>
+        p.user?.name?.toLowerCase().includes(q.toLowerCase())
+      ),
+    [providers, q]
   );
 
   return (
-    <div className={`home-page ${theme}`}>
-      {/* Hero Section */}
-      <section className="hero-section">
-        <h1>Find Trusted Services & Providers Near You</h1>
-        {user ? (
-          <h2>Hi {user.name}, browse top services and providers</h2>
-        ) : (
-          <>
-            <h2>Welcome! Find services or providers near you</h2>
-            <p>Create an account or login to book instantly</p>
-          </>
-        )}
-
-        <input
-          type="text"
-          placeholder="Search services or providers..."
-          className="search-bar"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </section>
-
-      {/* Animated Features Section */}
-      <section className="features-section">
-        <h2>Our Features</h2>
-        <div className="features-grid">
-          <div className="feature-card animate-card">
-            <h3>Easy Booking</h3>
-            <p>Select services and providers and book instantly.</p>
-          </div>
-          <div className="feature-card animate-card">
-            <h3>Trusted Providers</h3>
-            <p>All providers are verified to ensure quality service.</p>
-          </div>
-          <div className="feature-card animate-card">
-            <h3>Secure Payments</h3>
-            <p>Payments are processed safely and seamlessly.</p>
+    <>
+      <section className="section">
+        <div
+          className="card"
+          style={{
+            padding: "22px 22px 26px",
+            animation: "pop var(--normal) var(--ease)",
+          }}
+        >
+          <h1 style={{ margin: 0 }}>Book trusted services</h1>
+          <p className="muted" style={{ margin: "4px 0 12px" }}>
+            {user
+              ? `Welcome back, ${user.name}.`
+              : "Verified providers • Clear pricing • Easy booking"}
+          </p>
+          <div className="nav-search" style={{ maxWidth: 620 }}>
+            <input
+              placeholder="Try 'Plumber', 'Cleaning', 'AC repair'…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <Button
+              variant="primary"
+              onClick={() =>
+                (window.location.href = `/services?q=${encodeURIComponent(q)}`)
+              }
+            >
+              Search
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Top Services */}
-      <section className="top-services">
-        <h2>Top Services</h2>
+      <section className="section">
+        <h2>Popular services</h2>
         {loading ? (
-          <p>Loading services...</p>
-        ) : filteredServices.length > 0 ? (
-          <div className="card-grid">
-            {filteredServices.map((service) => (
-              <div key={service._id} className={`service-card ${theme}`}>
-                <h3>{service.name}</h3>
-                <p>{service.description}</p>
-                <p>Price: ${service.price}</p>
-                <p>Rating: {service.rating} ⭐</p>
+          <div className="muted">Loading…</div>
+        ) : filteredServices.length === 0 ? (
+          <div className="muted">No services found</div>
+        ) : (
+          <div className="grid grid-4 mt-3">
+            {filteredServices.slice(0, 8).map((s) => (
+              <div key={s._id} className="card">
+                <h3 style={{ margin: 0 }}>{s.name}</h3>
+                <div className="muted">{s.category || "General"}</div>
+                <div className="mt-2">{s.description || "No description."}</div>
+                <div className="mt-3" style={{ fontWeight: 800 }}>
+                  {s.price != null ? `₹${s.price}` : "Price on request"}
+                </div>
               </div>
             ))}
           </div>
-        ) : (
-          <p className="empty-msg">No services found</p>
         )}
       </section>
 
-      {/* Top Providers */}
-      <section className="top-providers">
-        <h2>Top Providers</h2>
+      <section className="section">
+        <h2>Top providers</h2>
         {loading ? (
-          <p>Loading providers...</p>
-        ) : filteredProviders.length > 0 ? (
-          <div className="card-grid">
-            {filteredProviders.map((provider) => (
-              <div key={provider._id} className={`provider-card ${theme}`}>
-                <h3>{provider.user.name}</h3>
-                <p>{provider.serviceCount} Services</p>
+          <div className="muted">Loading…</div>
+        ) : filteredProviders.length === 0 ? (
+          <div className="muted">No providers found</div>
+        ) : (
+          <div className="grid grid-4 mt-3">
+            {filteredProviders.slice(0, 8).map((p) => (
+              <div key={p._id} className="card">
+                <h3 style={{ margin: 0 }}>{p.user?.name}</h3>
+                <div className="muted">{p.services?.length || 0} services</div>
               </div>
             ))}
           </div>
-        ) : (
-          <p className="empty-msg">No providers found</p>
         )}
       </section>
-    </div>
+    </>
   );
 };
 

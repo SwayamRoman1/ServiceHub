@@ -2,15 +2,18 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+const hasRole = (user, role) => {
+  if (!role) return true;
+  if (Array.isArray(role)) return role.includes(user.role);
+  return user.role === role;
+};
+
 const ProtectedRoute = ({ children, role }) => {
   const { user, loading } = useAuth();
 
   if (loading) return <div>Loading...</div>;
-
   if (!user) return <Navigate to="/login" replace />;
-
-  if (role && user.role !== role)
-    return <div>You do not have permission to access this page.</div>;
+  if (!hasRole(user, role)) return <Navigate to="/unauthorized" replace />;
 
   return children;
 };
