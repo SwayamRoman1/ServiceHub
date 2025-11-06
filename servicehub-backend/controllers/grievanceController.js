@@ -1,39 +1,84 @@
 // controllers/grievanceController.js
 const Grievance = require("../models/Grievance");
+const ServiceProvider = require("../models/ServiceProvider");
 
-const getGrievances = async (_req, res) => {
-  const grievances = await Grievance.find().populate("user");
-  res.json(grievances);
-};
-
+// USER: create a grievance
 const createGrievance = async (req, res) => {
-  const { title, description } = req.body;
-  if (!title?.trim() || !description?.trim()) {
-    return res.status(400).json({ message: "Title and description required" });
+  try {
+    const { title, description } = req.body;
+    if (!title || !description) {
+      return res
+        .status(400)
+        .json({ message: "Title and description are required" });
+    }
+    const g = await Grievance.create({
+      user: req.user._id,
+      title: title.trim(),
+      description: description.trim(),
+      status: "pending",
+    });
+    res.status(201).json(g);
+  } catch (err) {
+    console.error("createGrievance error:", err);
+    res.status(500).json({ message: "Failed to submit support request" });
   }
-  const g = await Grievance.create({
-    user: req.user._id,
-    title: title.trim(),
-    description: description.trim(),
-  });
-  res.status(201).json(g);
 };
 
+// USER: list my grievances
+const getMyGrievances = async (req, res) => {
+  try {
+    const list = await Grievance.find({ user: req.user._id }).sort({
+      createdAt: -1,
+    });
+    res.json(list);
+  } catch (err) {
+    console.error("getMyGrievances error:", err);
+    res.status(500).json({ message: "Failed to fetch your support requests" });
+  }
+};
+
+// ADMIN: list all grievances
+const getGrievances = async (_req, res) => {
+  try {
+    const grievances = await Grievance.find()
+      .populate("user", "name email role")
+      .sort({ createdAt: -1 });
+    res.json(grievances);
+  } catch (err) {
+    console.error("getGrievances error:", err);
+    res.status(500).json({ message: "Failed to fetch grievances" });
+  }
+};
+
+// ADMIN: update (e.g., status)
 const updateGrievance = async (req, res) => {
-  const grievance = await Grievance.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
-  res.json(grievance);
+  try {
+    const g = await Grievance.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!g) return res.status(404).json({ message: "Not found" });
+    res.json(g);
+  } catch (err) {
+    console.error("updateGrievance error:", err);
+    res.status(500).json({ message: "Failed to update grievance" });
+  }
 };
 
+// ADMIN: delete
 const deleteGrievance = async (req, res) => {
-  await Grievance.findByIdAndDelete(req.params.id);
-  res.json({ message: "Grievance deleted" });
+  try {
+    await Grievance.findByIdAndDelete(req.params.id);
+    res.json({ message: "Grievance deleted" });
+  } catch (err) {
+    console.error("deleteGrievance error:", err);
+    res.status(500).json({ message: "Failed to delete grievance" });
+  }
 };
 
 module.exports = {
-  getGrievances,
   createGrievance,
+  getMyGrievances,
+  getGrievances,
   updateGrievance,
   deleteGrievance,
 };

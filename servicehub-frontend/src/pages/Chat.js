@@ -1,106 +1,131 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/pages/Chat.js
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import API from "../api/axios";
 import { useAuth } from "../context/AuthContext";
-import { Button, Input } from "../components/UI";
 
-const Chat = () => {
+const PROVIDER_TEMPLATES = [
+  "Hi! Thanks for reaching out. I’m available today — what time works for you?",
+  "Could you share your exact location and preferred time window?",
+  "Pricing depends on scope. I can visit and confirm a final quote.",
+  "I’ll bring all tools. Please ensure access and power are available.",
+  "Thanks! I can arrive within 60–90 minutes. Shall I proceed to book?",
+];
+
+export default function Chat() {
   const { otherUserId } = useParams();
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [loading, setLoading] = useState(true);
   const listRef = useRef(null);
 
-  const chatId = useMemo(() => {
-    if (!user || !otherUserId) return "";
-    const a = String(user._id),
-      b = String(otherUserId);
-    return a < b ? `${a}_${b}` : `${b}_${a}`;
-  }, [user, otherUserId]);
+  const chatId = `u:${user?._id}__with__${otherUserId}`;
 
-  const load = async () => {
-    if (!chatId) return;
+  const fetchMessages = async () => {
     try {
-      const res = await API.get(`/chat/${chatId}`);
+      const res = await API.get(`/chat/${encodeURIComponent(chatId)}`);
       setMessages(res.data || []);
-      setTimeout(() => {
-        if (listRef.current)
-          listRef.current.scrollTop = listRef.current.scrollHeight;
-      }, 0);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 4000);
-    return () => clearInterval(t); /* eslint-disable */
+    fetchMessages();
+    const t = setInterval(fetchMessages, 5000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
-  const send = async () => {
-    if (!text.trim()) return;
+  useEffect(() => {
+    listRef.current?.scrollTo({
+      top: listRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages]);
+
+  const send = async (overrideText) => {
+    const payload = (overrideText ?? text).trim();
+    if (!payload) return;
     try {
-      await API.post("/chat", { chatId, text });
-      setText("");
-      load();
+      const res = await API.post("/chat", { chatId, text: payload });
+      setMessages((prev) => [...prev, res.data]);
+      if (overrideText === undefined) setText("");
     } catch {
-      alert("Failed to send");
+      // optionally toast
     }
   };
 
-  if (!user)
-    return <section className="section">Please login to use chat.</section>;
+  const isProvider = user?.role === "provider";
 
   return (
-    <section
-      className="section"
-      style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16 }}
-    >
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Conversation</h3>
-        <div className="muted" style={{ fontSize: 13 }}>
-          with user: {otherUserId}
+    <div className="section">
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div
+          className="chat-header"
+          style={{ padding: 12, borderBottom: "1px solid var(--line)" }}
+        >
+          <strong>Chat</strong>
+          <div className="muted" style={{ fontSize: 14 }}>
+            Conversation ID: {chatId}
+          </div>
         </div>
-      </div>
 
-      <div
-        className="card"
-        style={{
-          display: "grid",
-          gridTemplateRows: "1fr auto",
-          minHeight: "60vh",
-          padding: 0,
-        }}
-      >
-        <div ref={listRef} style={{ overflowY: "auto", padding: "18px" }}>
-          {messages.length === 0 ? (
-            <div className="muted">No messages yet. Say hi!</div>
+        {isProvider && (
+          <div
+            className="quick-templates"
+            style={{
+              padding: 12,
+              borderBottom: "1px solid var(--line)",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            {PROVIDER_TEMPLATES.map((t, i) => (
+              <button
+                key={i}
+                className="btn-ghost btn-sm"
+                onClick={() => send(t)}
+                title="Send quick reply"
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div
+          ref={listRef}
+          className="message-list"
+          style={{ height: 420, overflow: "auto", padding: 12 }}
+        >
+          {loading ? (
+            <div className="muted">Loading messages…</div>
+          ) : messages.length === 0 ? (
+            <div className="muted">No messages yet.</div>
           ) : (
             messages.map((m) => {
-              const self = String(m.sender?._id) === String(user._id);
+              const mine =
+                m.sender === user?._id || m.sender?._id === user?._id;
               return (
                 <div
-                  key={m._id}
+                  key={m._id || m.createdAt}
+                  className={mine ? "chat-bubble-self" : "chat-bubble-other"}
                   style={{
-                    maxWidth: "70%",
-                    padding: "10px 12px",
-                    borderRadius: 22,
-                    marginBottom: 8,
-                    wordBreak: "break-word",
-                    background: self ? "var(--brand)" : "var(--surface-soft)",
-                    color: self ? "#fff" : "var(--ink)",
-                    marginLeft: self ? "auto" : 0,
-                    animation: "pop var(--normal) var(--ease)",
+                    maxWidth: 520,
+                    borderRadius: 14,
+                    padding: "8px 12px",
+                    margin: "8px 0",
+                    marginLeft: mine ? "auto" : 0,
+                    background: mine ? "var(--brand)" : "var(--surface-soft)",
+                    color: mine ? "#fff" : "var(--ink)",
                   }}
                 >
-                  <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>
-                    {m.sender?.name || m.sender?._id}
-                  </div>
-                  <div>{m.text}</div>
-                  <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>
-                    {new Date(m.createdAt).toLocaleString()}
-                  </div>
+                  {m.text}
                 </div>
               );
             })
@@ -108,26 +133,26 @@ const Chat = () => {
         </div>
 
         <div
+          className="chat-input"
           style={{
-            borderTop: "1px solid var(--line)",
-            padding: "10px",
             display: "flex",
-            gap: 10,
+            gap: 8,
+            padding: 12,
+            borderTop: "1px solid var(--line)",
           }}
         >
-          <Input
+          <input
+            className="input"
             placeholder="Type a message…"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
           />
-          <Button variant="primary" onClick={send}>
+          <button className="btn-primary" onClick={() => send()}>
             Send
-          </Button>
+          </button>
         </div>
       </div>
-    </section>
+    </div>
   );
-};
-
-export default Chat;
+}

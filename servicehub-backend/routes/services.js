@@ -2,12 +2,27 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
-const ctrl = require("../controllers/serviceController");
+const {
+  getServices,
+  getMyServices,
+  getServiceById,
+  createService,
+  updateService,
+  deleteService,
+} = require("../controllers/serviceController");
 
-router.get("/", ctrl.getAll);
-router.get("/mine", auth, ctrl.getMine);
-router.post("/", auth, ctrl.create);
-router.put("/:id", auth, ctrl.update);
-router.delete("/:id", auth, ctrl.remove);
+// Public
+router.get("/", getServices);
+
+// Provider convenience endpoint must be BEFORE :id
+router.get("/mine", auth, getMyServices);
+
+// Plain :id (no regex) — controller validates ObjectId
+router.get("/:id", getServiceById);
+
+// Create/Update/Delete
+router.post("/", auth, createService);
+router.put("/:id", auth, updateService);
+router.delete("/:id", auth, deleteService);
 
 module.exports = router;

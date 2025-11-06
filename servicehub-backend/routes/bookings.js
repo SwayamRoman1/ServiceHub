@@ -2,17 +2,23 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
-const Booking = require("../controllers/bookingController");
+const {
+  createBooking,
+  getUserBookings,
+  getProviderBookings,
+  updateBookingStatus,
+} = require("../controllers/bookingController");
 
-const requireAdmin = (req, res, next) =>
-  req.user?.role === "admin"
-    ? next()
-    : res.status(403).json({ message: "Admin only" });
+// user: create booking
+router.post("/", auth, createBooking);
 
-router.post("/", auth, Booking.create);
-router.get("/me", auth, Booking.getMyBookings);
-router.get("/provider", auth, Booking.getProviderBookings);
-router.put("/:id/status", auth, Booking.updateStatus);
-router.get("/", auth, requireAdmin, Booking.getAll); // admin-only
+// user: my bookings
+router.get("/", auth, getUserBookings);
+
+// provider: bookings for my services
+router.get("/provider", auth, getProviderBookings);
+
+// provider/admin: update booking status
+router.put("/:id/status", auth, updateBookingStatus);
 
 module.exports = router;

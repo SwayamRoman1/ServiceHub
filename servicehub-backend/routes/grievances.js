@@ -1,17 +1,21 @@
 // routes/grievances.js
 const express = require("express");
 const router = express.Router();
+const auth = require("../middleware/auth");
 const {
+  createGrievance,
+  getMyGrievances,
   getGrievances,
   updateGrievance,
   deleteGrievance,
-  createGrievance,
 } = require("../controllers/grievanceController");
-const auth = require("../middleware/auth");
 
-// public: admins can view with UI; users will POST to open a ticket
-router.get("/", getGrievances);
-router.post("/", auth, createGrievance); // ✅ allow users to submit
+// User: create + list mine
+router.post("/", auth, createGrievance);
+router.get("/mine", auth, getMyGrievances);
+
+// Admin: list all / modify / delete
+router.get("/", getGrievances); // if you want admin-only, add an admin guard
 router.put("/:id", auth, updateGrievance);
 router.delete("/:id", auth, deleteGrievance);
 

@@ -1,11 +1,18 @@
+// routes/providers.js
 const express = require("express");
 const router = express.Router();
+const {
+  getProviders,
+  updateProvider,
+  deleteProvider,
+} = require("../controllers/providerController");
 const auth = require("../middleware/auth");
-const isAdmin = require("../middleware/isAdmin");
-const ctrl = require("../controllers/providerController");
 
-router.get("/", ctrl.getAll);
-router.put("/:id", auth, isAdmin, ctrl.update);
-router.delete("/:id", auth, isAdmin, ctrl.remove);
+// public list of providers
+router.get("/", getProviders);
+
+// protected edits
+router.put("/:id", auth, updateProvider);
+router.delete("/:id", auth, deleteProvider);
 
 module.exports = router;

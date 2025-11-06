@@ -1,122 +1,129 @@
-import React, { useEffect, useMemo, useState } from "react";
+// src/pages/Services.js
+import React, { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
-import { useAuth } from "../context/AuthContext";
-import { Button, Input } from "../components/UI";
+
+const priceLabel = (s) => {
+  if (typeof s.price === "number") return `₹${s.price}`;
+  if (typeof s.priceMin === "number" && typeof s.priceMax === "number")
+    return `₹${s.priceMin}–₹${s.priceMax}`;
+  if (typeof s.priceMin === "number") return `From ₹${s.priceMin}`;
+  return "Ask price";
+};
 
 const Services = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const [services, setServices] = useState([]);
-  const [q, setQ] = useState(
-    new URLSearchParams(window.location.search).get("q") || ""
-  );
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState(null);
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [q, setQ] = useState("");
+  const [onlyToday, setOnlyToday] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    let on = true;
+    const load = async () => {
       try {
         const res = await API.get("/services");
-        setServices(res.data || []);
+        if (on) setServices(res.data || []);
+      } catch (e) {
+        console.error("Failed to fetch services:", e);
       } finally {
-        setLoading(false);
+        if (on) setLoading(false);
       }
-    })();
+    };
+    load();
+    return () => {
+      on = false;
+    };
   }, []);
 
-  const filtered = useMemo(
-    () =>
-      services.filter((s) => s.name?.toLowerCase().includes(q.toLowerCase())),
-    [services, q]
-  );
+  const filtered = useMemo(() => {
+    return services.filter((s) => {
+      const matchQ = q
+        ? s.name?.toLowerCase().includes(q.toLowerCase()) ||
+          s.location?.toLowerCase().includes(q.toLowerCase())
+        : true;
+      const matchToday = onlyToday ? !!s.availableToday : true;
+      return matchQ && matchToday;
+    });
+  }, [services, q, onlyToday]);
 
-  const book = async (serviceId) => {
-    if (!user) return alert("Please login to book.");
-    if (user.role !== "user") return alert("Only user accounts can book.");
-    try {
-      setBusyId(serviceId);
-      await API.post("/bookings", {
-        serviceId,
-        scheduledAt: scheduledAt || undefined,
-      });
-      alert("Booked successfully!");
-      setScheduledAt("");
-    } catch (e) {
-      alert(e?.response?.data?.message || "Booking failed");
-    } finally {
-      setBusyId(null);
-    }
-  };
+  if (loading)
+    return <div className="section shell-inner">Loading services…</div>;
 
   return (
-    <section className="section">
-      <div className="flex items-center gap-3">
-        <h1 className="mb-0">Explore services</h1>
-        <div
-          style={{ marginLeft: "auto", width: 360, maxWidth: "100%" }}
-          className="nav-search"
-        >
-          <input
-            placeholder="Search…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <button className="btn-ghost" onClick={() => setQ("")}>
-            Clear
-          </button>
-        </div>
-      </div>
+    <div className="services-page">
+      <div className="shell-inner">
+        <section className="services-hero">
+          <h1>All Services</h1>
+          <div className="srch-row" style={{ gap: 10 }}>
+            <input
+              className="input input-lg"
+              placeholder="Search services or location…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <div className="chip-row">
+            <button
+              className={`chip ${onlyToday ? "chip-on" : ""}`}
+              onClick={() => setOnlyToday((v) => !v)}
+            >
+              <span className="chip-icon">🕒</span> Available Today
+            </button>
+          </div>
+        </section>
 
-      {loading ? (
-        <div className="muted mt-3">Loading…</div>
-      ) : filtered.length === 0 ? (
-        <div className="muted mt-3">No services found.</div>
-      ) : (
-        <div className="grid grid-4 mt-3">
-          {filtered.map((s) => (
-            <div key={s._id} className="card">
-              <h3 style={{ margin: 0 }}>{s.name}</h3>
-              <div className="muted">{s.category || "General"}</div>
-              <div className="mt-2">{s.description || "No description."}</div>
-              <div className="mt-3" style={{ fontWeight: 800 }}>
-                {s.price != null ? `₹${s.price}` : "Price on request"}
-              </div>
-
-              {user?.role === "user" && (
-                <div className="mt-3">
-                  <label className="muted" style={{ fontSize: 12 }}>
-                    Schedule (optional)
-                  </label>
-                  <Input
-                    type="datetime-local"
-                    value={scheduledAt}
-                    onChange={(e) => setScheduledAt(e.target.value)}
-                    className="mt-2"
-                  />
-                  <div className="flex gap-3 mt-3">
-                    <Button
-                      variant="primary"
-                      onClick={() => book(s._id)}
-                      loading={busyId === s._id}
-                    >
-                      {busyId === s._id ? "Booking…" : "Book"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        (window.location.href = `/chat/${s.provider?.user}`)
-                      }
-                    >
-                      Ask provider
-                    </Button>
+        <section className="services-list">
+          {filtered.length ? (
+            <div className="services-grid">
+              {filtered.map((s) => (
+                <div
+                  key={s._id}
+                  className="card svc-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/service/${s._id}`)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && navigate(`/service/${s._id}`)
+                  }
+                >
+                  <div className="svc-thumb">
+                    <img
+                      src={s.image?.url || "https://picsum.photos/400/260"}
+                      alt={s.name}
+                    />
+                  </div>
+                  <div className="svc-body">
+                    <h3 className="svc-title">{s.name}</h3>
+                    <p className="svc-desc muted">
+                      {s.description || "No description"}
+                    </p>
+                    <div className="svc-info-row">
+                      <span className="badge-soft svc-rating">
+                        ⭐ {Number(s.rating || 0).toFixed(1)}
+                      </span>
+                      <span className="badge-soft svc-price">
+                        {priceLabel(s)}
+                      </span>
+                      <span className="badge-soft svc-location">
+                        📍 {s.location || "—"}
+                      </span>
+                    </div>
+                    {s.availableToday && (
+                      <span className="svc-tag">Available Today</span>
+                    )}
                   </div>
                 </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-    </section>
+          ) : (
+            <p className="muted" style={{ textAlign: "center", marginTop: 14 }}>
+              No services found.
+            </p>
+          )}
+        </section>
+      </div>
+    </div>
   );
 };
 

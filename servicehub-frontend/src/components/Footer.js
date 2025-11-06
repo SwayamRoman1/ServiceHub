@@ -1,77 +1,61 @@
-// src/components/Footer.js
 import React from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
-const Footer = () => (
-  <div className="footer-modern">
-    <div className="shell-inner">
-      <div
-        className="row"
-        style={{ alignItems: "center", justifyContent: "space-between" }}
-      >
-        <div
-          style={{
-            display: "inline-flex",
-            gap: 10,
-            alignItems: "center",
-            fontWeight: 900,
-          }}
-        >
-          <span className="brand-pill">S</span> ServiceHub
+const Footer = () => {
+  return (
+    <footer className="footer-solid">
+      <div className="shell-inner footer-modern">
+        {/* Top row: brand + quick links */}
+        <div className="row" style={{ paddingTop: 6, paddingBottom: 6 }}>
+          <div className="brand" aria-label="ServiceHub">
+            <span className="brand-pill" aria-hidden>
+              SH
+            </span>
+            ServiceHub
+          </div>
+
+          <div className="footer-links">
+            <NavLink to="/services" className="foot-link">
+              Services
+            </NavLink>
+            <NavLink to="/bookings" className="foot-link">
+              Bookings
+            </NavLink>
+            <NavLink to="/support" className="foot-link">
+              Support
+            </NavLink>
+            <NavLink to="/about" className="foot-link">
+              About
+            </NavLink>
+            <NavLink to="/privacy" className="foot-link">
+              Privacy
+            </NavLink>
+            <NavLink to="/terms" className="foot-link">
+              Terms
+            </NavLink>
+          </div>
         </div>
-        <nav className="footer-links" aria-label="Footer">
-          <Link to="/about" className="foot-link">
-            About
-          </Link>
-          <Link to="/privacy" className="foot-link">
-            Privacy
-          </Link>
-          <Link to="/terms" className="foot-link">
-            Terms
-          </Link>
-          <a className="foot-link" href="mailto:support@servicehub.local">
-            Support
-          </a>
-        </nav>
-      </div>
-      <div
-        className="row"
-        style={{
-          color: "var(--ink-2)",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>© {new Date().getFullYear()} ServiceHub</div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <a
-            className="icon-btn"
-            style={{ width: 34, height: 34 }}
-            href="#"
-            aria-label="X / Twitter"
-          >
-            𝕏
-          </a>
-          <a
-            className="icon-btn"
-            style={{ width: 34, height: 34 }}
-            href="#"
-            aria-label="Instagram"
-          >
-            ⓘ
-          </a>
-          <a
-            className="icon-btn"
-            style={{ width: 34, height: 34 }}
-            href="#"
-            aria-label="LinkedIn"
-          >
-            in
-          </a>
+
+        {/* Bottom row: copyright + small links */}
+        <div className="row" style={{ paddingTop: 6, paddingBottom: 6 }}>
+          <div className="muted">
+            © {new Date().getFullYear()} ServiceHub • All rights reserved
+          </div>
+          <div className="footer-links">
+            <NavLink to="/privacy" className="foot-link">
+              Privacy
+            </NavLink>
+            <NavLink to="/terms" className="foot-link">
+              Terms
+            </NavLink>
+            <NavLink to="/support" className="foot-link">
+              Help
+            </NavLink>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-);
+    </footer>
+  );
+};
 
 export default Footer;
